@@ -1,36 +1,48 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# nucula.dev
 
-## Getting Started
+Landing page for [nucula](https://github.com/zeugmaster/nucula) — a Cashu
+ecash wallet for the ESP32 with NFC tap-to-pay.
 
-First, run the development server:
+Built with Next.js (App Router) and Tailwind CSS v4. Designed to be hosted on
+Vercel.
 
-```bash
+## Development
+
+```sh
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## PCB graphics
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The x-ray board graphics in `public/pcb/` are generated from the actual
+KiCad files of the nucula board (`nucula-board.kicad_pcb`) using
+`kicad-cli`, one SVG per layer:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```sh
+kicad-cli pcb export svg \
+  --mode-single --exclude-drawing-sheet --fit-page-to-board \
+  --black-and-white --drill-shape-opt 2 \
+  -l F.Cu -o fcu.svg nucula-board.kicad_pcb
+```
 
-## Learn More
+For the copper layers, the zone fills (`filled_polygon` blocks) are stripped
+from a temporary copy of the board file first, so only traces, pads and vias
+remain. The exported SVGs are then tinted by replacing `#000000` with a layer
+color and `#FFFFFF` (drill holes) with `#000000`, and composited in the
+browser with `mix-blend-mode: screen` on a dark background.
 
-To learn more about Next.js, take a look at the following resources:
+Layer tints:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| file            | layer        | color     |
+| --------------- | ------------ | --------- |
+| `fcu.svg`       | F.Cu         | `#D98E4A` |
+| `bcu.svg`       | B.Cu         | `#3C7A6A` |
+| `fsilk.svg`     | F.Silkscreen | `#E4E0D4` |
+| `ffab.svg`      | F.Fab        | `#6E7A70` |
+| `edge.svg`      | Edge.Cuts    | `#9BA69C` |
+| `schematic.svg` | (schematic)  | `#55605A` |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`og.png` is a 1200×630 screenshot of the hero. `render_top.png` and
+`render_bottom.png` are `kicad-cli pcb render` raytraces of the board, kept
+around as spare assets.
