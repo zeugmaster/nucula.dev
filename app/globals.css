@@ -49,11 +49,14 @@ body {
   color: #0a0b09;
 }
 
-/* film grain over everything, very faint */
+/* film grain over everything, very faint. The 6px top gap keeps this
+   fixed overlay out of Safari 26's edge-sampling zone — if it touches
+   the top edge, Safari samples it (transparent) instead of the header
+   and the status-bar strip loses its tint. */
 body::after {
   content: "";
   position: fixed;
-  inset: 0;
+  inset: 6px 0 0 0;
   z-index: 200;
   pointer-events: none;
   opacity: 0.028;
