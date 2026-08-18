@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Space_Grotesk, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -14,6 +14,13 @@ const plexMono = IBM_Plex_Mono({
   weight: ["400", "500"],
   display: "swap",
 });
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#0a0b09",
+};
 
 const description =
   "Nucula is a small, open-source Cashu ecash wallet built on an ESP32. NFC tap-to-pay, Lightning in and out, and it doesn't mind being offline.";
