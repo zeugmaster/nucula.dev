@@ -1,12 +1,5 @@
 import XrayBoard from "./XrayBoard";
-
-const heroLayers = [
-  { id: "bcu", src: "/pcb/bcu.svg", opacity: 0.6, depth: 5 },
-  { id: "fcu", src: "/pcb/fcu.svg", opacity: 1, depth: 10 },
-  { id: "ffab", src: "/pcb/ffab.svg", opacity: 0.24, depth: 15 },
-  { id: "fsilk", src: "/pcb/fsilk.svg", opacity: 0.9, depth: 19 },
-  { id: "edge", src: "/pcb/edge.svg", opacity: 0.85, depth: 23 },
-];
+import { boardLayers } from "./board";
 
 export default function Hero() {
   return (
@@ -26,8 +19,8 @@ export default function Hero() {
           </h1>
           <p className="mt-8 max-w-[46ch] text-lg leading-relaxed text-muted">
             Nucula is a small, open-source hardware wallet for Cashu ecash. It
-            runs on an ESP32, receives payments with an NFC tap, and doesn&apos;t
-            mind being offline.
+            is designed for NFC tap-to-pay and offline ecash. The v2 board pairs
+            an ESP32-C3 with an OLED and a detachable keypad.
           </p>
           <div className="mt-10 flex flex-wrap items-center gap-4">
             <a
@@ -36,7 +29,7 @@ export default function Hero() {
               rel="noreferrer"
               className="mono-label border border-copper bg-copper/10 px-5 py-3 text-copper-bright transition-colors hover:bg-copper hover:text-bg"
             >
-              Source on GitHub ↗
+              Firmware on GitHub ↗
             </a>
             <a
               href="#idea"
@@ -46,22 +39,22 @@ export default function Hero() {
             </a>
           </div>
           <div className="mono-label mt-16 flex flex-wrap gap-x-6 gap-y-2 text-muted/80">
-            <span>XIAO ESP32-C6</span>
+            <span>ESP32-C3</span>
             <span className="text-line-strong">/</span>
             <span>PN7160 NFC</span>
             <span className="text-line-strong">/</span>
             <span>128×64 OLED</span>
             <span className="text-line-strong">/</span>
-            <span>3×4 keypad</span>
+            <span>Detachable keypad</span>
           </div>
         </div>
 
         <div className="relative flex items-center justify-center">
           <div className="board-float w-full max-w-[340px] rotate-[3deg] md:max-w-[380px]">
-            <XrayBoard layers={heroLayers} parallax scan glow />
+            <XrayBoard layers={boardLayers} parallax scan glow />
           </div>
           <p className="mono-label absolute -bottom-6 right-0 hidden text-muted/60 md:block">
-            nucula board v0.1 · rev 01 · x-ray composite
+            nucula v2 · four-layer PCB · x-ray composite
           </p>
         </div>
       </div>

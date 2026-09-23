@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useRef } from "react";
+import boardSource from "@/public/pcb/source.json";
 
 export type BoardLayer = {
   id: string;
@@ -26,7 +27,7 @@ export default function XrayBoard({
   scan = false,
   glow = false,
   className = "",
-  label = "X-ray view of the nucula circuit board",
+  label = "X-ray view of the four-layer Nucula v2 circuit board",
 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -58,7 +59,7 @@ export default function XrayBoard({
       onPointerMove={parallax ? onPointerMove : undefined}
       onPointerLeave={parallax ? onPointerLeave : undefined}
       className={`relative ${className}`}
-      style={{ aspectRatio: "624 / 1000" }}
+      style={{ aspectRatio: boardSource.aspectRatio }}
     >
       {glow && (
         <div

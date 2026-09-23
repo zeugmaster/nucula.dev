@@ -21,7 +21,15 @@ export default function Footer() {
               rel="noreferrer"
               className="transition-colors hover:text-ink"
             >
-              GitHub ↗
+              Firmware ↗
+            </a>
+            <a
+              href="https://github.com/zeugmaster/nucula-board"
+              target="_blank"
+              rel="noreferrer"
+              className="transition-colors hover:text-ink"
+            >
+              Hardware ↗
             </a>
             <a
               href="https://cashu.space"
