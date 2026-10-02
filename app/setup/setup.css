@@ -14,7 +14,7 @@
 .setup-page p { max-width: 68ch; text-wrap: pretty; }
 .setup-page a { text-underline-offset: 4px; }
 .setup-page a:hover { text-decoration: underline; }
-.setup-page :is(a,button,input,summary,pre):focus-visible { outline: 2px solid currentColor; outline-offset: 4px; }
+.setup-page :is(a,button,input,select,summary,pre):focus-visible { outline: 2px solid currentColor; outline-offset: 4px; }
 .setup-header { max-width: 1440px; margin: auto; padding: 24px 48px; display: flex; justify-content: space-between; align-items: center; gap: 24px; border-bottom: 1px solid var(--setup-line); }
 .setup-header > a:last-child { font-size: 13px; font-family: var(--font-mono); }
 .setup-wordmark { font-size: 24px; font-weight: 600; letter-spacing: -0.03em; }
@@ -54,7 +54,7 @@
 .setup-button.primary { background: var(--setup-ink); color: var(--setup-bg); }
 .setup-button:hover:not(:disabled) { background: #ddd; color: var(--setup-ink); }
 .setup-button.primary:hover:not(:disabled) { background: #343434; color: var(--setup-bg); }
-.setup-page :is(button,input):disabled, .setup-page fieldset:disabled { cursor: not-allowed; }
+.setup-page :is(button,input,select):disabled, .setup-page fieldset:disabled { cursor: not-allowed; }
 .setup-button:disabled { border-color: #bdbdbd; color: #777; background: #e9e9e9; }
 .setup-text-button { font-size: 13px; min-height: 44px; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }
 .setup-text-button:disabled { color: #777; text-decoration: none; }
@@ -137,3 +137,9 @@
 @media (prefers-reduced-motion: reduce) {
   .setup-page *, .setup-page *::before, .setup-page *::after { transition: none !important; }
 }
+
+.setup-release-picker > label:first-child { display: block; font-size: 14px; font-weight: 500; margin: 22px 0 8px; }
+.setup-release-picker select { width: 100%; min-height: 46px; padding: 11px 13px; border: 1px solid #b5b5b5; border-radius: 0; background: #fff; color: var(--setup-ink); font: inherit; }
+.setup-release-picker select:disabled { background: #eaeaea; }
+.setup-release-kind { display: inline-block; margin-left: 12px; font-size: 12px; border: 1px solid currentColor; padding: 2px 7px; vertical-align: middle; }
+.setup-release-notes { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 180px; overflow: auto; }

@@ -9,19 +9,26 @@ export type FirmwareRelease = {
   parts: FirmwarePart[];
 };
 export type FirmwareImage = FirmwarePart & { data: Uint8Array };
+export type FirmwareCandidate = { id: string; prerelease: boolean; publishedAt: string | null; url: string; release: FirmwareRelease };
+export type FirmwareCatalog = { candidates: FirmwareCandidate[]; warning?: string };
+
+export function assetPath(releaseId: number, sha256: string, name: string) {
+  return `/api/firmware/assets/${releaseId}/${sha256}/${name}`;
+}
+const remoteAsset = /^\/api\/firmware\/assets\/[1-9][0-9]*\/[a-f0-9]{64}\/(bootloader\.bin|partition-table\.bin|nucula\.bin|source\.tar\.gz)$/;
 
 export function validateRelease(value: unknown): FirmwareRelease {
   const r = value as FirmwareRelease;
   if (!r || r.schema !== 1 || r.board !== "nucula-v2" || r.chip !== "ESP32-C3" ||
       typeof r.version !== "string" || typeof r.notes !== "string" || typeof r.source !== "string" ||
-      !/^\/firmware\/[a-zA-Z0-9_.-]+\/source\.tar\.gz$/.test(r.source) || r.source.includes("..") ||
+      !(/^\/firmware\/[a-zA-Z0-9_.-]+\/source\.tar\.gz$/.test(r.source) || (remoteAsset.test(r.source) && r.source.endsWith("/source.tar.gz"))) || r.source.includes("..") ||
       !Array.isArray(r.parts) || r.parts.length !== 3)
     throw new Error("This firmware release is not compatible with nucula v2.");
   const limits = new Map([[0, 0x8000], [0x8000, 0x1000], [0x30000, 0x1d0000]]);
   const seen = new Set<number>();
   for (const p of r.parts) {
     if (!p || !limits.has(p.offset) || seen.has(p.offset) || !Number.isInteger(p.size) || p.size <= 0 ||
-        p.size > limits.get(p.offset)! || !/^\/firmware\/[a-zA-Z0-9_./-]+\.bin$/.test(p.path) ||
+        p.size > limits.get(p.offset)! || !(/^\/firmware\/[a-zA-Z0-9_./-]+\.bin$/.test(p.path) || (remoteAsset.test(p.path) && p.path.endsWith(".bin"))) ||
         p.path.includes("..") || !/^[a-f0-9]{64}$/.test(p.sha256) || !/^[a-f0-9]{32}$/.test(p.md5))
       throw new Error("The release contains an invalid image or unsafe flash address.");
     seen.add(p.offset);
@@ -29,10 +36,13 @@ export function validateRelease(value: unknown): FirmwareRelease {
   return r;
 }
 
-export async function loadRelease(signal?: AbortSignal): Promise<FirmwareRelease> {
-  const response = await fetch("/firmware/manifest.json", { cache: "no-store", signal });
+export async function loadCatalog(signal?: AbortSignal): Promise<FirmwareCatalog> {
+  const response = await fetch("/api/firmware/releases", { cache: "no-store", signal });
   if (!response.ok) throw new Error("Firmware download is unavailable. You can still connect and configure an installed board.");
-  return validateRelease(await response.json());
+  const catalog = await response.json() as FirmwareCatalog;
+  if (!Array.isArray(catalog.candidates)) throw new Error("The firmware catalog is unavailable.");
+  for (const candidate of catalog.candidates) validateRelease(candidate.release);
+  return catalog;
 }
 
 export async function downloadImages(release: FirmwareRelease): Promise<FirmwareImage[]> {

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type Fo
 import { BoardConnection, bootGuidance, startFirmware } from "@/lib/setup/serial";
 import { reconnectAfterRestart } from "@/lib/setup/reconnect";
 import { readableError, wifiFields, type DeviceInfo } from "@/lib/setup/protocol";
-import { downloadImages, loadRelease, type FirmwareRelease } from "@/lib/setup/release";
+import { downloadImages, loadCatalog, type FirmwareCatalog } from "@/lib/setup/release";
 import type { FlashProgress } from "@/lib/setup/flash";
 
 const subscribe = () => () => {};
@@ -12,7 +12,12 @@ const browserSupport = () => !window.isSecureContext ? "insecure" : typeof navig
 
 export default function SetupTool() {
   const support = useSyncExternalStore(subscribe, browserSupport, () => "checking");
-  const [release, setRelease] = useState<FirmwareRelease | null>(null);
+  const [catalog, setCatalog] = useState<FirmwareCatalog | null>(null);
+  const [selectedRelease, setSelectedRelease] = useState("");
+  const [includePreviews, setIncludePreviews] = useState(false);
+  const candidates = catalog?.candidates.filter((candidate) => includePreviews || !candidate.prerelease) ?? [];
+  const candidate = candidates.find((entry) => entry.id === selectedRelease) ?? candidates[0];
+  const release = candidate?.release;
   const [releaseError, setReleaseError] = useState("");
   const [connected, setConnected] = useState(false);
   const [info, setInfo] = useState<DeviceInfo | null>(null);
@@ -42,12 +47,12 @@ export default function SetupTool() {
     // Render text, never terminal HTML. Keep a bounded in-memory transcript.
     const clean = text.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "").replace(/\r/g, "");
     if (mounted.current) setOutput((previous) => (previous + clean).slice(-48000));
-  }, []);
+  }, [setOutput]);
 
   useEffect(() => {
     mounted.current = true;
     const controller = new AbortController();
-    void loadRelease(controller.signal).then(setRelease).catch((err) => {
+    void loadCatalog(controller.signal).then(setCatalog).catch((err) => {
       if (!controller.signal.aborted) setReleaseError(readableError(err));
     });
     return () => {
@@ -168,7 +173,11 @@ export default function SetupTool() {
   }
 
   async function install() {
-    if (!release || !confirmed || !begin("install")) return;
+    if (!release || !confirmed) return;
+    if (info?.storage_schema && info.storage_schema !== "nucula-nvs-v1") {
+      setError("This board uses a different wallet storage format. This release cannot be installed safely."); return;
+    }
+    if (!begin("install")) return;
     let handedOver = false;
     let installed = false;
     try {
@@ -315,8 +324,22 @@ export default function SetupTool() {
             <section className="setup-section" aria-labelledby="firmware-title">
               <div className="setup-section-heading"><h2 id="firmware-title">Initial firmware install / update</h2>{info && release?.version === info.version && <span className="setup-status">Up to date</span>}</div>
               <p>Flash nucula onto a new board or update an existing installation. This works even when no firmware is installed. Plug in the USB cable and start here; the installer will ask you to select the board.</p>
-              {release ? <><p><strong>{release.version}</strong><br />{release.notes}</p><p className="setup-note">Updates write only the application and preserve wallet storage. Move funds off the board before updating, and keep the cable connected until verification finishes. <a href={release.source} download>Download this build’s source.</a></p></>
-                : <p role="status">{releaseError || "Loading the available firmware…"}</p>}
+              {catalog && <div className="setup-release-picker">
+                <label htmlFor="firmware-version">Firmware version</label>
+                <select id="firmware-version" value={candidate?.id ?? ""} disabled={disabled || !candidates.length} onChange={(event) => { setSelectedRelease(event.target.value); setReview(false); setConfirmed(false); setProgress(null); }}>
+                  {!candidates.length && <option value="">No stable release available yet</option>}
+                  {candidates.map((entry, index) => <option key={entry.id} value={entry.id}>{entry.release.version}{entry.id === "bundled-preview" ? " · Bundled preview" : entry.prerelease ? " · Prerelease" : index === 0 ? " · Latest stable" : ""}</option>)}
+                </select>
+                <label className="setup-checkbox"><input type="checkbox" checked={includePreviews} disabled={disabled} onChange={(event) => { setIncludePreviews(event.target.checked); setSelectedRelease(""); setReview(false); setConfirmed(false); setProgress(null); }} />Include prereleases and the bundled preview</label>
+              </div>}
+              {catalog?.warning && <p className="setup-note" role="status">{catalog.warning}</p>}
+              {release ? <>
+                <p><strong>{release.version}</strong>{candidate?.publishedAt && <> · {new Date(candidate.publishedAt).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}</>}{candidate?.prerelease && <span className="setup-release-kind">Preview</span>}</p>
+                {candidate?.prerelease && <p className="setup-note">Preview firmware may be unfinished. Choose a stable release for everyday use when one is available.</p>}
+                {release.notes && <p className="setup-release-notes">{release.notes}</p>}
+                <p className="setup-note"><a href={candidate?.url} target="_blank" rel="noreferrer">Release notes ↗</a> · <a href={release.source} download>Download this build’s source</a></p>
+                <p className="setup-note">Updates write only the application and preserve wallet storage. Move funds off the board before updating, and keep the cable connected until verification finishes.</p>
+              </> : <p role="status">{releaseError || (catalog ? "No compatible stable firmware is available yet. Enable previews to see test builds. Board configuration is still available above." : "Loading the available firmware…")}</p>}
               {!review && <button className="setup-button" disabled={support !== "supported" || !release || disabled} onClick={() => { setReview(true); setConfirmed(false); }}>{info ? "Review update" : "Review installation"}</button>}
               {!connected && !progress && <p className="setup-note">If the USB port won’t stay available, hold BOOT, tap RESET, then release BOOT before starting the installation.</p>}
               {review && <div className="setup-install-review">

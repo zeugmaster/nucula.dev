@@ -57,7 +57,7 @@ The installer requires an ESP32-C3 with 4 MB flash and refuses boards provisione
 with secure boot, encryption counters or secure download mode. Every downloaded
 image is checked against its SHA-256, and written bytes are verified using the
 device's MD5 command. These checks detect corruption; release authenticity relies
-on the HTTPS origin and its deployment process, not a separate signing key.
+on the fixed GitHub firmware repository, HTTPS, and the website deployment.
 
 An existing partition table must match the release exactly. Updates write only
 the application at `0x30000`. A blank table also requires blank NVS before a first
@@ -82,25 +82,52 @@ Opening the console releases both modem signals without pulsing reset. A
 connected board that does not answer also offers **Start installed firmware**;
 this restarts it without reflashing or changing credentials.
 
-### Preparing another firmware release
+### Automated firmware releases
 
-The companion firmware changes live in `../embedded/nucula`: `main/web_setup.cpp`,
-`wifi.c`, `console.cpp`, and startup registration. Public builds no longer include
-`main/wifi_config.h`. Build from those sources with the ESP-IDF environment active:
+The setup page reads published releases from **zeugmaster/nucula** through
+`GET /api/firmware/releases`. The newest compatible stable version is selected;
+prereleases and the bundled `usb-setup-1` preview are opt-in. Drafts, incomplete
+releases, mismatched tags, and unknown compatibility formats are excluded.
+Release selection and installation consent are locked while an operation runs.
+If GitHub is unavailable, USB configuration still works and the bundled preview
+remains explicitly available. No preview is silently selected as stable.
 
-```sh
-idf.py -DPROJECT_VER=usb-setup-2 build
-# From this website repository:
-npm run firmware:package -- /path/to/nucula/build
-```
+In the firmware repository, `.github/workflows/firmware.yml` builds and tests on
+pull requests and main pushes. Pushing `vX.Y.Z` or `vX.Y.Z-rc.N` (also alpha/beta)
+produces a complete **draft GitHub Release**. Test its assets on hardware, review
+the release notes, then publish the draft. See the firmware repository's
+[release guide](https://github.com/zeugmaster/nucula/blob/main/docs/releases.md).
+Firmware versions and website versions are independent.
 
-The packager validates the target, offsets, executable headers, app version and
-partition layout; emits separate images plus SHA-256/MD5 hashes; and includes a
-source archive with personal credential headers excluded. Version directories are
-immutable: choose a new version when rebuilding. `public/firmware/manifest.json`
-selects the offered release. Deploy the manifest and its version directory together.
-Do not copy older locally built binaries: they may contain Wi-Fi credentials.
-The firmware package is served from the same origin as the page.
+Published releases appear without redeploying this website, normally within ten
+minutes (upstream metadata and the response cache each refresh every five
+minutes). Reload the page to refresh an already open selector. The catalog checks
+up to 300 recent GitHub releases and offers up to 20 stable and 10 prerelease
+candidates, ordered by semantic version rather than publication date.
+
+This requires a Next.js **server deployment**, not a static export. Public GitHub
+access works without credentials. For production, set a server-only
+`FIRMWARE_GITHUB_TOKEN` with read-only Contents access to `zeugmaster/nucula` to
+avoid GitHub's shared unauthenticated rate limit. Never use a `NEXT_PUBLIC_`
+variable for it. The browser only calls this website; credentials never reach it.
+
+Manifest schema 2 specifies Rev-A, ESP32-C3, 4 MiB flash, USB setup protocol 1,
+`nucula-nvs-v1` storage, asset names, lengths, hashes, toolchain and source commit.
+The server resolves names against that release's actual asset IDs. Downloads use
+`/api/firmware/assets/<release-id>/<sha256>/<filename>` and are checked again on
+the server and in the browser. The endpoint cannot proxy arbitrary URLs or private
+repository files. Source archives are also verified. Firmware images are still
+checked against the real board's chip, security settings and storage layout.
+
+All firmware using a storage identifier must preserve and read data written by
+all other releases using that identifier, including newer versions. Incompatible
+changes need a new identifier and changed partition-table bytes so older
+installers also refuse them in ROM mode. There is no automatic wallet migration
+or full-flash erase in this installer.
+
+`scripts/package-firmware.py` remains a local-only packager for the legacy bundled
+preview format. New releases use the firmware-owned `scripts/package-release.py`;
+do not update the website's bundled manifest for each new GitHub release.
 
 The USB protocol is a single console command:
 `web {"id":"request-id","op":"info"}`. Responses are newline-delimited JSON

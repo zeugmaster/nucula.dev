@@ -6,6 +6,7 @@ export type DeviceInfo = {
   board: "nucula-v2";
   version: string;
   storage_ready: boolean;
+  storage_schema?: string;
   configured: boolean;
   connected: boolean;
   restart_required: boolean;
