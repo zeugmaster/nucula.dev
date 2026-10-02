@@ -1,22 +1,18 @@
-import Nav from "@/components/Nav";
-import Hero from "@/components/Hero";
-import WhatItIs from "@/components/WhatItIs";
-import HowItWorks from "@/components/HowItWorks";
+import Stage from "@/components/Stage";
+import Intro from "@/components/Intro";
 import Hardware from "@/components/Hardware";
-import Protocol from "@/components/Protocol";
+import Firmware from "@/components/Firmware";
 import Build from "@/components/Build";
 import Footer from "@/components/Footer";
 
 export default function Home() {
   return (
     <>
-      <Nav />
+      <Stage />
       <main>
-        <Hero />
-        <WhatItIs />
-        <HowItWorks />
+        <Intro />
         <Hardware />
-        <Protocol />
+        <Firmware />
         <Build />
       </main>
       <Footer />

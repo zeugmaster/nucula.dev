@@ -1,61 +1,37 @@
+import { Kicker } from "./ui";
+
+const links = [
+  ["Firmware", "github.com/zeugmaster/nucula", "https://github.com/zeugmaster/nucula"],
+  ["Hardware", "github.com/zeugmaster/nucula-board", "https://github.com/zeugmaster/nucula-board"],
+  ["Cashu", "cashu.space", "https://cashu.space"],
+  ["Specs", "github.com/cashubtc/nuts", "https://github.com/cashubtc/nuts"],
+];
+
 export default function Footer() {
   return (
-    <footer className="relative overflow-hidden border-t border-line">
-      <div className="mx-auto max-w-[1120px] px-6 pb-10 pt-16">
-        <div className="flex flex-col justify-between gap-10 md:flex-row md:items-end">
-          <div>
-            <p className="font-mono text-sm text-ink">
-              nucula<span className="text-copper">_</span>
-            </p>
-            <p className="mt-3 max-w-[44ch] text-sm leading-relaxed text-muted">
-              An open ecash wallet — firmware, board and this page. The back of
-              the circuit board reads{" "}
-              <span className="text-ink">&ldquo;Freedom to transact.&rdquo;</span>{" "}
-              That&apos;s the whole idea.
-            </p>
-          </div>
-          <nav className="mono-label flex flex-wrap gap-x-8 gap-y-3 text-muted">
-            <a
-              href="https://github.com/zeugmaster/nucula"
-              target="_blank"
-              rel="noreferrer"
-              className="transition-colors hover:text-ink"
-            >
-              Firmware ↗
-            </a>
-            <a
-              href="https://github.com/zeugmaster/nucula-board"
-              target="_blank"
-              rel="noreferrer"
-              className="transition-colors hover:text-ink"
-            >
-              Hardware ↗
-            </a>
-            <a
-              href="https://cashu.space"
-              target="_blank"
-              rel="noreferrer"
-              className="transition-colors hover:text-ink"
-            >
-              Cashu ↗
-            </a>
-            <a
-              href="https://github.com/cashubtc/nuts"
-              target="_blank"
-              rel="noreferrer"
-              className="transition-colors hover:text-ink"
-            >
-              NUT specs ↗
-            </a>
-          </nav>
-        </div>
-      </div>
-      <div
-        aria-hidden
-        className="watermark select-none whitespace-nowrap text-center font-medium leading-[0.78] tracking-tight"
-        style={{ fontSize: "clamp(120px, 19vw, 300px)" }}
-      >
-        nucula
+    <footer data-scene data-board="hero" data-theme="dark" data-section="nucula" className="scene">
+      <div className="wrap w-full">
+        <Kicker>On the back of the board</Kicker>
+        <p className="h2 xl max-w-[12ch]" data-a="rise">
+          Freedom <span className="dim">to transact.</span>
+        </p>
+        <div className="gap-l" />
+        <dl className="spec max-w-[760px]">
+          {links.map(([k, label, href]) => (
+            <div key={k} data-a="rise">
+              <dt>{k}</dt>
+              <dd>
+                <a href={href} target="_blank" rel="noreferrer">
+                  {label} ↗
+                </a>
+              </dd>
+            </div>
+          ))}
+        </dl>
+        <div className="gap-l" />
+        <p className="caps" data-a="fade">
+          nucula · open firmware, open hardware, open page
+        </p>
       </div>
     </footer>
   );

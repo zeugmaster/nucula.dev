@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "board": "nucula-v2",
+  "chip": "ESP32-C3",
+  "version": "usb-setup-1",
+  "notes": "USB setup preview for Rev-A. Wi-Fi configuration and serial console; OLED remains disabled for bring-up. Hardware validation pending.",
+  "source": "/firmware/usb-setup-1/source.tar.gz",
+  "parts": [
+    {
+      "path": "/firmware/usb-setup-1/bootloader.bin",
+      "offset": 0,
+      "size": 20944,
+      "sha256": "8f1f8560902accd8b93e63cf4c3373bae7995acc208815115c3d6cd5c0ac229b",
+      "md5": "db4b95160104c3a04d2a151c993785c1"
+    },
+    {
+      "path": "/firmware/usb-setup-1/partition-table.bin",
+      "offset": 32768,
+      "size": 3072,
+      "sha256": "4581dfe86babb81e95e0a3e5058f38b6baeb42f9ebc301557c521db587ccc14e",
+      "md5": "dd3ac843502e0d5991b05ee99a018f51"
+    },
+    {
+      "path": "/firmware/usb-setup-1/nucula.bin",
+      "offset": 196608,
+      "size": 1168640,
+      "sha256": "dd79f672d8e1e729b4df357ec9c9556da07ad17ce94e211c0f1accf0732d74e4",
+      "md5": "34e53d7b8dc4dd759edcd336454d548c"
+    }
+  ]
+}
