@@ -1,6 +1,12 @@
 import { test, expect, type Page } from "@playwright/test";
+import bundled from "../public/firmware/manifest.json";
 
-async function serialMock(page: Page, mode: "modern" | "legacy" | "silent" | "cancel" | "save-error" | "boot-drop" | "download-mode" | "download-slow" | "reboot-delay" | "reboot-offline" | "reboot-error" | "reboot-missing" = "modern") {
+const stable = { id: "1", prerelease: false, publishedAt: "2026-10-02T00:00:00Z", url: "https://github.com/zeugmaster/nucula/releases/tag/v0.1.0", release: { ...bundled, version: "0.1.0", notes: "Stable test firmware" } };
+test.beforeEach(async ({ page }) => {
+  await page.route("**/api/firmware/releases", (route) => route.fulfill({ json: { candidates: [stable] } }));
+});
+
+async function serialMock(page: Page, mode: "modern" | "legacy" | "silent" | "cancel" | "save-error" | "boot-drop" | "download-mode" | "download-slow" | "reboot-delay" | "reboot-offline" | "reboot-error" | "reboot-missing" | "incompatible-storage" = "modern") {
   await page.addInitScript(({ mode }) => {
     let controller: ReadableStreamDefaultController<Uint8Array>;
     let input = "";
@@ -43,7 +49,7 @@ async function serialMock(page: Page, mode: "modern" | "legacy" | "silent" | "ca
               state.requests.push(request);
               if (mode === "download-slow" && request.op === "info" && droppedInfo++ < 2) continue;
               let reply;
-              if (request.op === "info") reply = { id: request.id, ok: true, protocol: 1, board: "nucula-v2", version: "older-test-build", storage_ready: true, configured: true, connected: !(rebooted && mode === "reboot-offline"), restart_required: restartRequired, ssid: activeSsid, ip: rebooted && mode === "reboot-offline" ? "" : "192.168.1.42" };
+              if (request.op === "info") reply = { id: request.id, ok: true, protocol: 1, board: "nucula-v2", version: "older-test-build", storage_schema: mode === "incompatible-storage" ? "nucula-nvs-v2" : "nucula-nvs-v1", storage_ready: true, configured: true, connected: !(rebooted && mode === "reboot-offline"), restart_required: restartRequired, ssid: activeSsid, ip: rebooted && mode === "reboot-offline" ? "" : "192.168.1.42" };
               else if (request.op === "wifi.set") {
                 restartRequired = true;
                 savedSsid = new TextDecoder().decode(Uint8Array.from(request.ssid_hex.match(/.{2}/g), (byte: string) => parseInt(byte, 16)));
@@ -297,7 +303,7 @@ test("a corrupt download stops before closing the console or opening the bootloa
 
 test("configuration remains available when the release server fails", async ({ page }) => {
   await serialMock(page);
-  await page.route("**/firmware/manifest.json", (route) => route.fulfill({ status: 503, body: "unavailable" }));
+  await page.route("**/api/firmware/releases", (route) => route.fulfill({ status: 503, body: "unavailable" }));
   await connected(page);
   await expect(page.getByRole("button", { name: "Save Wi-Fi settings" })).toBeEnabled();
   await expect(page.getByRole("button", { name: "Review update" })).toBeDisabled();
@@ -358,4 +364,67 @@ test("ROM download mode gives installation guidance instead of a generic timeout
   await page.getByRole("button", { name: "Connect board", exact: true }).click();
   await expect(page.getByText("The board is in download mode.", { exact: false })).toBeVisible();
   await expect(page.getByRole("button", { name: "Review installation" })).toBeEnabled();
+});
+
+
+test("version picker defaults to stable, hides previews and resets installation consent", async ({ page }) => {
+  await serialMock(page);
+  const preview = { ...stable, id: "2", prerelease: true, release: { ...stable.release, version: "0.2.0-rc.1" } };
+  const older = { ...stable, id: "3", release: { ...stable.release, version: "0.0.9" } };
+  await page.route("**/api/firmware/releases", (route) => route.fulfill({ json: { candidates: [stable, older, preview] } }));
+  await page.goto("/setup");
+  const picker = page.getByLabel("Firmware version", { exact: true });
+  await expect(picker).toHaveValue("1");
+  await expect(picker.locator("option")).toHaveCount(2);
+  await page.getByRole("button", { name: "Review installation" }).click();
+  await page.getByLabel("This is a nucula v2 board.").check();
+  await picker.selectOption("3");
+  await expect(page.getByRole("button", { name: "Install firmware", exact: true })).toHaveCount(0);
+  await page.getByLabel("Include prereleases and the bundled preview").check();
+  await expect(picker).toHaveValue("1");
+  await expect(picker.locator("option")).toHaveCount(3);
+  await picker.selectOption("2");
+  await expect(page.getByText("Preview firmware may be unfinished.", { exact: false })).toBeVisible();
+  await page.getByLabel("Include prereleases and the bundled preview").uncheck();
+  await expect(picker).toHaveValue("1");
+});
+
+test("an empty stable catalog offers previews explicitly and leaves configuration available", async ({ page }) => {
+  await serialMock(page);
+  await page.route("**/api/firmware/releases", (route) => route.fulfill({ json: { candidates: [{ ...stable, id: "bundled-preview", prerelease: true, release: bundled }], warning: "GitHub releases are temporarily unavailable." } }));
+  await connected(page);
+  await expect(page.getByRole("button", { name: "Review update" })).toBeDisabled();
+  await expect(page.getByLabel("Network name")).toBeEnabled();
+  await page.getByLabel("Include prereleases and the bundled preview").check();
+  await expect(page.getByRole("button", { name: "Review update" })).toBeEnabled();
+});
+
+test("release selection stays locked while downloading firmware", async ({ page }) => {
+  await serialMock(page);
+  let started!: () => void;
+  const downloading = new Promise<void>((resolve) => { started = resolve; });
+  await page.route("**/firmware/**/*.bin", async (route) => { started(); await new Promise((resolve) => setTimeout(resolve, 1500)); await route.fulfill({ body: "corrupt" }); });
+  await page.goto("/setup");
+  await page.getByRole("button", { name: "Review installation" }).click();
+  await page.getByLabel("This is a nucula v2 board.").check();
+  await page.getByRole("button", { name: "Install firmware", exact: true }).click();
+  await downloading;
+  await expect(page.getByLabel("Firmware version", { exact: true })).toBeDisabled();
+  await expect(page.getByLabel("Include prereleases and the bundled preview")).toBeDisabled();
+  await expect(page.getByRole("main").getByRole("alert")).toContainText("Firmware verification failed");
+  await expect(page.getByLabel("Firmware version", { exact: true })).toBeEnabled();
+});
+
+
+test("an installed firmware with a newer storage format cannot be downgraded", async ({ page }) => {
+  await serialMock(page, "incompatible-storage");
+  await connected(page);
+  await page.getByRole("button", { name: "Review update" }).click();
+  await page.getByLabel("This is a nucula v2 board.").check();
+  await page.getByRole("button", { name: "Install firmware", exact: true }).click();
+  await expect(page.getByRole("main").getByRole("alert")).toContainText("different wallet storage format");
+  await expect(page.getByRole("button", { name: "Disconnect", exact: true })).toBeEnabled();
+  const state = await page.evaluate(() => (window as unknown as { serialTest: { picked: number; closed: number } }).serialTest);
+  expect(state.picked).toBe(1);
+  expect(state.closed).toBe(0);
 });
